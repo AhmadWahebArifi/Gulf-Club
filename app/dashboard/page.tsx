@@ -381,6 +381,141 @@ export default function DashboardPage() {
             ) : null}
           </section>
 
+          {/* Score Tracking Section */}
+          <section className="rounded-2xl border border-black/[.08] bg-white p-6 shadow-sm dark:border-white/[.145] dark:bg-black">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold">Add Your Score</h2>
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                Record your latest golf round
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Score</label>
+                <input
+                  type="number"
+                  value={score}
+                  onChange={(e) => setScore(e.target.value === "" ? "" : parseInt(e.target.value))}
+                  className="w-full rounded-lg border border-black/[.08] px-3 py-2 dark:border-white/[.145] dark:bg-black"
+                  placeholder="Enter your score"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Date Played</label>
+                <input
+                  type="date"
+                  value={playedAt}
+                  onChange={(e) => setPlayedAt(e.target.value)}
+                  className="w-full rounded-lg border border-black/[.08] px-3 py-2 dark:border-white/[.145] dark:bg-black"
+                />
+              </div>
+              <button
+                className="w-full rounded-xl bg-black px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
+                onClick={async () => {
+                  if (!score || !playedAt) return;
+                  setDbLoading(true);
+                  try {
+                    await supabase.from("scores").insert({
+                      user_id: user.id,
+                      score: parseInt(score.toString()),
+                      date: playedAt,
+                    });
+                    setScore("");
+                    setPlayedAt("");
+                    // Refresh scores
+                    const { data } = await supabase
+                      .from("scores")
+                      .select("*")
+                      .eq("user_id", user.id)
+                      .order("date", { ascending: false })
+                      .limit(5);
+                    setScores(data || []);
+                  } catch (err) {
+                    setDbError("Failed to save score");
+                  } finally {
+                    setDbLoading(false);
+                  }
+                }}
+              >
+                Save Score
+              </button>
+            </div>
+
+            {/* Recent Scores */}
+            {scores.length > 0 && (
+              <div className="mt-6">
+                <h3 className="text-sm font-semibold mb-2">Recent Scores</h3>
+                <div className="space-y-2">
+                  {scores.map((s) => (
+                    <div key={s.id} className="flex justify-between text-sm">
+                      <span>{s.score}</span>
+                      <span className="text-zinc-500">{new Date(s.date).toLocaleDateString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* Charity Selection Section */}
+          <section className="rounded-2xl border border-black/[.08] bg-white p-6 shadow-sm dark:border-white/[.145] dark:bg-black">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold">Charity Support</h2>
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                Choose your cause and contribution
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Select Charity</label>
+                <select
+                  value={selectedCharityId}
+                  onChange={(e) => setSelectedCharityId(e.target.value)}
+                  className="w-full rounded-lg border border-black/[.08] px-3 py-2 dark:border-white/[.145] dark:bg-black"
+                >
+                  {charities.map((charity) => (
+                    <option key={charity.id} value={charity.id}>
+                      {charity.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Percentage to Charity (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={charityPercentage}
+                  onChange={(e) => setCharityPercentage(e.target.value === "" ? "" : parseInt(e.target.value))}
+                  className="w-full rounded-lg border border-black/[.08] px-3 py-2 dark:border-white/[.145] dark:bg-black"
+                  placeholder="Enter percentage"
+                />
+              </div>
+              <button
+                className="w-full rounded-xl bg-green-600 px-4 pig-2 temple-2 text-sm font-medium text-white hover:bg-green-700"
+                onClick={async () => {
+                  if (!selectedCharityId || !charityPercentage) return;
+                  setDbLoading(true);
+                  try {
+                    await supabase.from("user_charity").upsert({
+                      user_id: user.id,
+                      charity_id: selectedCharityId,
+                      percentage: parseInt(charityPercentage.toString()),
+                    });
+                    setDbError(null);
+                  } catch (err) {
+                    setDbError("Failed to save charity preference");
+                  } finally {
+                    setDbLoading(false);
+                  }
+                }}
+              >
+                Save Charity Preference
+              </button>
+            </div>
+          </section>
+
           </div>
       </div>
     </div>
