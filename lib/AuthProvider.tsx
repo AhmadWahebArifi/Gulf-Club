@@ -22,7 +22,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     supabase.auth
       .getSession()
-      .then(({ data, error }) => {
+      .then(({ data, error }: { data: any; error: any }) => {
         if (!active) return;
         if (error) throw error;
         setSession(data.session);
@@ -32,7 +32,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setLoading(false);
       });
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event: any, nextSession: any) => {
       setSession(nextSession);
     });
 
