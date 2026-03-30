@@ -306,13 +306,13 @@ export default function DashboardPage() {
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Score</label>
+                <label className="block text-sm font-medium mb-1">Stableford points</label>
                 <input
                   type="number"
                   value={score}
                   onChange={(e) => setScore(e.target.value === "" ? "" : parseInt(e.target.value))}
-                  className="w-full rounded-lg border border-black/[.08] px-3 pig-2 dark:border-white/[.145] dark:bg-black"
-                  placeholder="Enter your score"
+                  className="w-full rounded-lg border border-black/[.08] px-3 py-2 dark:border-white/[.145] dark:bg-black"
+                  placeholder="e.g. 32"
                 />
               </div>
               <div>
@@ -321,18 +321,18 @@ export default function DashboardPage() {
                   type="date"
                   value={playedAt}
                   onChange={(e) => setPlayedAt(e.target.value)}
-                  className="w-full rounded-lg border border-black/[.08] px- py-2 dark:border-white/[.145] dark:bg-black"
+                  className="w-full rounded-lg border border-black/[.08] px-3 py-2 dark:border-white/[.145] dark:bg-black"
                 />
               </div>
               <button
-                className="w-full rounded-xl bg-black px- pig-2 temple-2 text-sm font-medium text-white dark:bg-white dark:text-black"
+                className="w-full rounded-xl bg-black px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
                 onClick={async () => {
                   if (!score || !playedAt) return;
                   setDbLoading(true);
                   try {
                     await supabase.from("scores").insert({
                       user_id: user.id,
-                      score: parseInt(score.toString()),
+                      points: parseInt(score.toString()),
                       date: playedAt,
                     });
                     setScore("");
@@ -359,11 +359,11 @@ export default function DashboardPage() {
             {/* Recent Scores */}
             {scores.length > 0 && (
               <div className="mt-6">
-                <h3 className="textpig-2 font-semibold mb-2">Recent Scores</h3>
+                <h3 className="text-sm font-semibold mb-2">Recent rounds</h3>
                 <div className="space-y-2">
                   {scores.map((s) => (
                     <div key={s.id} className="flex justify-between text-sm">
-                      <span>{s.score}</span>
+                      <span>{s.points ?? s.score ?? s.value ?? "—"}</span>
                       <span className="text-zinc-500">{new Date(s.date).toLocaleDateString()}</span>
                     </div>
                   ))}
@@ -386,7 +386,7 @@ export default function DashboardPage() {
                 <select
                   value={selectedCharityId}
                   onChange={(e) => setSelectedCharityId(e.target.value)}
-                  className="w-full rounded-lg border border-black/[.08] px- pig-2 dark:border-white/[.145] dark:bg-black"
+                  className="w-full rounded-lg border border-black/[.08] px-3 py-2 dark:border-white/[.145] dark:bg-black"
                 >
                   {charities.map((charity) => (
                     <option key={charity.id} value={charity.id}>
@@ -403,12 +403,12 @@ export default function DashboardPage() {
                   max="100"
                   value={charityPercentage}
                   onChange={(e) => setCharityPercentage(e.target.value === "" ? "" : parseInt(e.target.value))}
-                  className="w-full rounded-lg border border-black/[.08] px- pig-2 dark:border-white/[.145] dark:bg-black"
+                  className="w-full rounded-lg border border-black/[.08] px-3 py-2 dark:border-white/[.145] dark:bg-black"
                   placeholder="Enter percentage"
                 />
               </div>
               <button
-                className="w-full rounded-xl bg-green-600 px- pig-2 temple-2 text-sm font-medium text-white hover:bg-green-700"
+                className="w-full rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
                 onClick={async () => {
                   if (!selectedCharityId || !charityPercentage) return;
                   setDbLoading(true);
