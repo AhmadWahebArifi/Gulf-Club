@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../lib/AuthProvider";
 import { supabase } from "../../lib/supabaseClient";
 
@@ -60,11 +60,20 @@ function formatMaybeSupabaseError(err: unknown, fallback: string) {
   return fallback;
 }
 
-const ADMIN_EMAIL = "admin@golfclub.com";
+const DEFAULT_ADMIN_EMAIL = "admin@golfclub.com";
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+
+  const isAdmin = useMemo(() => {
+    const configured = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+    const emails = (configured ? configured.split(",") : [DEFAULT_ADMIN_EMAIL])
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    const current = user?.email?.toLowerCase() ?? "";
+    return Boolean(current && emails.includes(current));
+  }, [user?.email]);
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   let supabaseUrlHost: string | null = null;
@@ -197,7 +206,7 @@ export default function DashboardPage() {
               <p className="mt-2 text-lg text-purple-200">Play Golf. Support Charity. Win Prizes.</p>
             </div>
             <div className="flex gap-3">
-              {user.email === ADMIN_EMAIL && (
+              {isAdmin && (
                 <Link
                   href="/admin"
                   className="inline-flex h-12 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm px-6 text-sm font-medium text-white transition-all hover:bg-white/20 border border-white/20"
