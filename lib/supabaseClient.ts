@@ -31,6 +31,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
       signInWithPassword: () => Promise.resolve({ data: null, error: new Error("Supabase not configured") }),
       signUp: () => Promise.resolve({ data: null, error: new Error("Supabase not configured") }),
       signOut: () => Promise.resolve({ error: null }),
+      onAuthStateChange: () => ({
+        data: { subscription: { unsubscribe: () => {} } }
+      }),
     },
   };
 } else {
