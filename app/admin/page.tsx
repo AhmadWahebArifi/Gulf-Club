@@ -2,17 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../lib/AuthProvider";
 import { supabase } from "../../lib/supabaseClient";
 
-const ADMIN_EMAIL = "admin@golfclub.com";
-
-type UserRow = {
-  id: string;
-  email: string;
-  created_at: string;
-};
+const DEFAULT_ADMIN_EMAIL = "admin@golfclub.com";
 
 type ScoreRow = {
   id: string;
@@ -25,10 +19,19 @@ type ScoreRow = {
 };
 
 type Winner = {
+  user_id: string;
   user_email: string;
-  matches: number;
+  points: number;
+  entries: number;
   prize: string;
-  draw_numbers: number[];
+};
+
+type DrawEventRow = {
+  id: string;
+  period_start: string;
+  created_at: string;
+  algorithm: string;
+  params: Record<string, unknown> | null;
 };
 
 type VerificationSubmission = {
@@ -77,13 +80,22 @@ export default function AdminPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
 
+  const isAdmin = useMemo(() => {
+    const configured = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
+    const emails = (configured ? configured.split(",") : [DEFAULT_ADMIN_EMAIL])
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean);
+    const current = user?.email?.toLowerCase() ?? "";
+    return Boolean(current && emails.includes(current));
+  }, [user?.email]);
+
   const [dbLoading, setDbLoading] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
 
-  const [users, setUsers] = useState<UserRow[]>([]);
   const [scores, setScores] = useState<ScoreRow[]>([]);
-  const [drawNumbers, setDrawNumbers] = useState<number[]>([]);
   const [winners, setWinners] = useState<Winner[]>([]);
+  const [drawEvents, setDrawEvents] = useState<DrawEventRow[]>([]);
+  const [selectedDrawEventId, setSelectedDrawEventId] = useState<string | null>(null);
   const [verifications, setVerifications] = useState<VerificationSubmission[]>([]);
   const [uploadingFile, setUploadingFile] = useState(false);
 
@@ -93,8 +105,8 @@ export default function AdminPage() {
       router.replace("/login?next=/admin");
       return;
     }
-    
-    if (user.email !== ADMIN_EMAIL) {
+
+    if (!isAdmin) {
       router.replace("/dashboard");
       return;
     }
@@ -109,41 +121,21 @@ export default function AdminPage() {
     setDbError(null);
 
     try {
-      const [usersRes, scoresRes, verificationsRes] = await Promise.all([
-        supabase.auth.admin.listUsers(),
-        supabase
-          .from("scores")
-          .select(`
-            *,
-            user:auth.users(email)
-          `)
-          .order("date", { ascending: false })
-          .limit(50),
-        supabase
-          .from("verifications")
-          .select("*")
-          .order("submitted_at", { ascending: false })
-          .limit(20),
+      const [scoresRes, verificationsRes, drawEventsRes] = await Promise.all([
+        supabase.from("scores").select("*").order("date", { ascending: false }).limit(50),
+        supabase.from("verifications").select("*").order("submitted_at", { ascending: false }).limit(20),
+        supabase.from("draw_events").select("*").order("period_start", { ascending: false }).limit(12),
       ]);
 
-      if (usersRes.error) throw usersRes.error;
       if (scoresRes.error) throw scoresRes.error;
       if (verificationsRes.error) throw verificationsRes.error;
+      if (drawEventsRes.error) throw drawEventsRes.error;
 
-      const usersList = usersRes.data.users.map((u: any) => ({
-        id: u.id,
-        email: u.email,
-        created_at: u.created_at,
-      }));
-
-      const scoresList = (scoresRes.data as any[]).map(s => ({
-        ...s,
-        user_email: s.user?.email,
-      }));
-
-      setUsers(usersList);
-      setScores(scoresList);
+      setScores(((scoresRes.data as ScoreRow[]) ?? []) as ScoreRow[]);
       setVerifications((verificationsRes.data as VerificationSubmission[]) ?? []);
+      const events = (drawEventsRes.data as DrawEventRow[]) ?? [];
+      setDrawEvents(events);
+      setSelectedDrawEventId((prev) => prev ?? (events[0]?.id ?? null));
     } catch (err) {
       setDbError(formatMaybeSupabaseError(err, "Failed to load admin data"));
     } finally {
@@ -151,44 +143,144 @@ export default function AdminPage() {
     }
   };
 
-  const generateDraw = () => {
-    const draw = Array.from({length:5}, () => Math.floor(Math.random()*45)+1);
-    setDrawNumbers(draw);
-    
-    // Calculate winners
-    const userScoresMap = new Map<string, number[]>();
-    
-    scores.forEach(score => {
-      const scoreValue = score.score ?? score.points ?? score.value ?? 0;
-      if (scoreValue > 0 && score.user_email) {
-        if (!userScoresMap.has(score.user_email)) {
-          userScoresMap.set(score.user_email, []);
-        }
-        userScoresMap.get(score.user_email)?.push(scoreValue);
-      }
-    });
+  const ENTRY_POINTS = 10;
+  const WINNER_COUNT = 3;
 
-    const newWinners: Winner[] = [];
-    
-    userScoresMap.forEach((userScores, userEmail) => {
-      const matches = userScores.filter(score => draw.includes(score)).length;
-      
-      if (matches >= 3) {
-        let prize = "";
-        if (matches === 5) prize = "JACKPOT";
-        else if (matches === 4) prize = "MID PRIZE";
-        else if (matches === 3) prize = "SMALL PRIZE";
-        
-        newWinners.push({
-          user_email: userEmail,
-          matches,
-          prize,
-          draw_numbers: draw,
-        });
-      }
-    });
+  function startOfCurrentMonthISO() {
+    const d = new Date();
+    const start = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+    return start.toISOString().slice(0, 10);
+  }
 
-    setWinners(newWinners.sort((a, b) => b.matches - a.matches));
+  function entriesFromPoints(points: number) {
+    if (!Number.isFinite(points) || points <= 0) return 0;
+    return Math.max(1, Math.floor(points / ENTRY_POINTS));
+  }
+
+  function weightedPickOne(items: Array<{ user_id: string; weight: number }>) {
+    const total = items.reduce((sum, it) => sum + it.weight, 0);
+    if (total <= 0) return null;
+    let r = Math.random() * total;
+    for (const it of items) {
+      r -= it.weight;
+      if (r <= 0) return it.user_id;
+    }
+    return items[items.length - 1]?.user_id ?? null;
+  }
+
+  const runMonthlyDraw = async () => {
+    if (!user) return;
+
+    setDbLoading(true);
+    setDbError(null);
+    setWinners([]);
+
+    try {
+      const periodStart = startOfCurrentMonthISO();
+
+      const [activeSubsRes, monthScoresRes] = await Promise.all([
+        supabase
+          .from("subscriptions")
+          .select("user_id")
+          .eq("status", true),
+        supabase
+          .from("scores")
+          .select("user_id,points,date")
+          .gte("date", periodStart)
+          .order("date", { ascending: false })
+          .limit(5000),
+      ]);
+
+      if (activeSubsRes.error) throw activeSubsRes.error;
+      if (monthScoresRes.error) throw monthScoresRes.error;
+
+      const activeUserIds = new Set<string>(
+        ((activeSubsRes.data as Array<{ user_id: string }>) ?? []).map((r) => r.user_id),
+      );
+
+      const pointsByUser = new Map<string, number>();
+      (((monthScoresRes.data as any[]) ?? []) as Array<{ user_id: string; points?: number | null }>).forEach(
+        (row) => {
+          if (!activeUserIds.has(row.user_id)) return;
+          const p = typeof row.points === "number" ? row.points : 0;
+          pointsByUser.set(row.user_id, (pointsByUser.get(row.user_id) ?? 0) + p);
+        },
+      );
+
+      const pool = Array.from(pointsByUser.entries())
+        .map(([user_id, points]) => ({ user_id, points, entries: entriesFromPoints(points) }))
+        .filter((x) => x.entries > 0);
+
+      if (pool.length === 0) {
+        throw new Error("No eligible entries this month. Ensure users have Stableford points saved and active subscriptions.");
+      }
+
+      // Create draw event
+      const { data: eventRow, error: eventErr } = await supabase
+        .from("draw_events")
+        .insert({
+          period_start: periodStart,
+          algorithm: "weighted_by_points",
+          params: { entry_points: ENTRY_POINTS, winner_count: WINNER_COUNT },
+          created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (eventErr) throw eventErr;
+
+      const eventId = (eventRow as { id: string }).id;
+
+      // Pick winners without replacement
+      const winnersPicked: Array<{ user_id: string; points: number; entries: number; prize: string }> = [];
+      const remaining = [...pool];
+
+      for (let i = 0; i < Math.min(WINNER_COUNT, remaining.length); i++) {
+        const pick = weightedPickOne(remaining.map((r) => ({ user_id: r.user_id, weight: r.entries })));
+        if (!pick) break;
+        const pickedRow = remaining.find((r) => r.user_id === pick);
+        if (!pickedRow) break;
+
+        const prize = i === 0 ? "GOLD" : i === 1 ? "SILVER" : "BRONZE";
+        winnersPicked.push({ user_id: pick, points: pickedRow.points, entries: pickedRow.entries, prize });
+
+        const idx = remaining.findIndex((r) => r.user_id === pick);
+        if (idx >= 0) remaining.splice(idx, 1);
+      }
+
+      if (winnersPicked.length === 0) {
+        throw new Error("Draw failed to select winners.");
+      }
+
+      const { error: winnersErr } = await supabase.from("draw_winners").insert(
+        winnersPicked.map((w) => ({
+          draw_event_id: eventId,
+          user_id: w.user_id,
+          points: w.points,
+          entries: w.entries,
+          prize: w.prize,
+        })),
+      );
+
+      if (winnersErr) throw winnersErr;
+
+      setWinners(
+        winnersPicked.map((w) => ({
+          user_id: w.user_id,
+          user_email: w.user_id,
+          points: w.points,
+          entries: w.entries,
+          prize: w.prize,
+        })),
+      );
+
+      await loadData();
+      setSelectedDrawEventId(eventId);
+    } catch (err) {
+      setDbError(formatMaybeSupabaseError(err, "Failed to run monthly draw"));
+    } finally {
+      setDbLoading(false);
+    }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -271,7 +363,7 @@ export default function AdminPage() {
     );
   }
 
-  if (user.email !== ADMIN_EMAIL) {
+  if (!isAdmin) {
     return (
       <div className="flex flex-1 items-center justify-center bg-zinc-50 px-6 py-16 dark:bg-black">
         <div className="text-sm text-zinc-600 dark:text-zinc-400">Access denied</div>
@@ -310,31 +402,6 @@ export default function AdminPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-6">
-          {/* Users Table */}
-          <section className="rounded-2xl border border-black/[.08] bg-white p-6 shadow-sm dark:border-white/[.145] dark:bg-black">
-            <h2 className="text-lg font-semibold mb-4">Users ({users.length})</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-black/[.08] dark:border-white/[.145]">
-                    <th className="text-left py-2 px-2">Email</th>
-                    <th className="text-left py-2 px-2">Created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((user) => (
-                    <tr key={user.id} className="border-b border-black/[.04] dark:border-white/[.08]">
-                      <td className="py-2 px-2">{user.email}</td>
-                      <td className="py-2 px-2 text-zinc-600 dark:text-zinc-400">
-                        {new Date(user.created_at).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
           {/* Scores Table */}
           <section className="rounded-2xl border border-black/[.08] bg-white p-6 shadow-sm dark:border-white/[.145] dark:bg-black">
             <h2 className="text-lg font-semibold mb-4">Recent Scores ({scores.length})</h2>
@@ -342,7 +409,7 @@ export default function AdminPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-black/[.08] dark:border-white/[.145]">
-                    <th className="text-left py-2 px-2">User</th>
+                    <th className="text-left py-2 px-2">User Id</th>
                     <th className="text-left py-2 px-2">Score</th>
                     <th className="text-left py-2 px-2">Date</th>
                   </tr>
@@ -350,7 +417,7 @@ export default function AdminPage() {
                 <tbody>
                   {scores.map((score) => (
                     <tr key={score.id} className="border-b border-black/[.04] dark:border-white/[.08]">
-                      <td className="py-2 px-2">{score.user_email || "Unknown"}</td>
+                      <td className="py-2 px-2">{score.user_id}</td>
                       <td className="py-2 px-2">{score.score ?? score.points ?? score.value ?? "—"}</td>
                       <td className="py-2 px-2 text-zinc-600 dark:text-zinc-400">
                         {new Date(score.date).toLocaleDateString()}
@@ -364,26 +431,34 @@ export default function AdminPage() {
 
           {/* Generate Draw Section */}
           <section className="rounded-2xl border border-black/[.08] bg-white p-6 shadow-sm dark:border-white/[.145] dark:bg-black">
-            <h2 className="text-lg font-semibold mb-4">Generate Draw</h2>
+            <h2 className="text-lg font-semibold mb-4">Monthly Draw Engine</h2>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+              Winners are selected with weighted randomness based on Stableford points this month.
+            </p>
             <button
               className="inline-flex h-11 items-center justify-center rounded-xl bg-black px-4 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-black"
-              onClick={generateDraw}
+              onClick={runMonthlyDraw}
+              disabled={dbLoading}
             >
-              Generate New Draw
+              {dbLoading ? "Running draw…" : "Run Monthly Draw"}
             </button>
 
-            {drawNumbers.length > 0 && (
-              <div className="mt-4">
-                <div className="text-sm font-medium mb-2">Draw Numbers:</div>
-                <div className="flex gap-2 flex-wrap">
-                  {drawNumbers.map((num, idx) => (
-                    <div key={idx} className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center text-sm font-medium dark:bg-white dark:text-black">
-                      {num}
-                    </div>
+            {drawEvents.length > 0 ? (
+              <div className="mt-6">
+                <div className="text-sm font-medium mb-2">Recent draw events</div>
+                <select
+                  className="w-full max-w-md rounded-xl border border-black/[.08] bg-white px-3 py-2 text-sm dark:border-white/[.145] dark:bg-black"
+                  value={selectedDrawEventId ?? ""}
+                  onChange={(e) => setSelectedDrawEventId(e.target.value)}
+                >
+                  {drawEvents.map((ev) => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.period_start} · {ev.algorithm}
+                    </option>
                   ))}
-                </div>
+                </select>
               </div>
-            )}
+            ) : null}
           </section>
 
           {/* Winner Verification Section */}
@@ -483,7 +558,8 @@ export default function AdminPage() {
                   <thead>
                     <tr className="border-b border-black/[.08] dark:border-white/[.145]">
                       <th className="text-left py-2 px-2">User</th>
-                      <th className="text-left py-2 px-2">Matches</th>
+                      <th className="text-left py-2 px-2">Points</th>
+                      <th className="text-left py-2 px-2">Entries</th>
                       <th className="text-left py-2 px-2">Prize</th>
                     </tr>
                   </thead>
@@ -491,11 +567,12 @@ export default function AdminPage() {
                     {winners.map((winner, idx) => (
                       <tr key={idx} className="border-b border-black/[.04] dark:border-white/[.08]">
                         <td className="py-2 px-2">{winner.user_email}</td>
-                        <td className="py-2 px-2">{winner.matches}</td>
+                        <td className="py-2 px-2">{winner.points}</td>
+                        <td className="py-2 px-2">{winner.entries}</td>
                         <td className="py-2 px-2">
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            winner.prize === "JACKPOT" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" :
-                            winner.prize === "MID PRIZE" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" :
+                            winner.prize === "GOLD" ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" :
+                            winner.prize === "SILVER" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400" :
                             "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
                           }`}>
                             {winner.prize}
