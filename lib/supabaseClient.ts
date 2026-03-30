@@ -3,12 +3,14 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+let supabase: any;
+
 // Create a dummy client during build time if env vars are missing
 if (!supabaseUrl || !supabaseAnonKey) {
   // During build time, create a mock client that won't crash
   console.warn("Supabase environment variables not found. Using mock client for build.");
   
-  export const supabase = {
+  supabase = {
     from: () => ({
       select: () => ({
         eq: () => ({
@@ -47,5 +49,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
     );
   }
 
-  export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  supabase = createClient(supabaseUrl, supabaseAnonKey);
 }
+
+export { supabase };
