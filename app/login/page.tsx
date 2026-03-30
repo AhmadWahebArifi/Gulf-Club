@@ -14,8 +14,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     let active = true;
 
     supabase.auth.getSession().then(({ data }: { data: any }) => {
@@ -28,7 +34,15 @@ export default function LoginPage() {
     return () => {
       active = false;
     };
-  }, [router, next]);
+  }, [router, next, mounted]);
+
+  if (!mounted) {
+    return (
+      <div className="flex flex-1 items-center justify-center bg-zinc-50 px-6 py-16 dark:bg-black">
+        <div className="text-sm text-zinc-600 dark:text-zinc-400">Loading…</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-1 items-center justify-center bg-zinc-50 px-6 py-16 dark:bg-black">
