@@ -18,7 +18,7 @@ export default function LoginPage() {
   useEffect(() => {
     let active = true;
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(({ data }: { data: any }) => {
       if (!active) return;
       if (data.session) {
         router.replace(next);
