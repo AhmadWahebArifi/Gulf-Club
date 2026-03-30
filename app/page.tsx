@@ -1,14 +1,18 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import AuthControls from "./AuthControls";
 import LoadingSpinner from "../components/LoadingSpinner";
 import Toast from "../components/Toast";
+import Navbar from "../components/Navbar";
 import { useToast } from "../lib/useToast";
+import { useAuth } from "../lib/AuthProvider";
 import { useState } from "react";
 
 export default function Home() {
   const { toasts, showToast, removeToast } = useToast();
+  const { user, loading } = useAuth();
   const [isSubscribing, setIsSubscribing] = useState(false);
 
   const handleSubscribe = async () => {
@@ -22,8 +26,9 @@ export default function Home() {
   };
 
   return (
-    <div className="gradient-bg min-h-screen flex flex-col items-center justify-center font-sans">
-      <main className="flex flex-1 w-full max-w-6xl flex-col items-center justify-between py-20 px-8">
+    <div className="gradient-bg min-h-screen flex flex-col">
+      <Navbar />
+      <main className="flex-1 w-full max-w-6xl flex flex-col items-center justify-center py-20 px-8">
         
         {/* Hero Section */}
         <div className="flex flex-col items-center gap-8 text-center mb-16 animate-fade-in-up">
@@ -70,24 +75,73 @@ export default function Home() {
 
         {/* Main CTA */}
         <div className="flex flex-col items-center gap-6 animate-fade-in-up" style={{ animationDelay: "0.6s" }}>
-          <button 
-            onClick={handleSubscribe}
-            disabled={isSubscribing}
-            className="cta-button text-white text-lg font-semibold px-12 py-6 rounded-full text-xl flex items-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
-          >
-            {isSubscribing ? (
-              <>
-                <LoadingSpinner size="sm" />
-                Processing...
-              </>
-            ) : (
-              "Subscribe & Support Charity"
-            )}
-          </button>
+          {loading ? (
+            <div className="w-64 h-16 bg-white/10 rounded-full animate-pulse flex items-center justify-center">
+              <div className="w-6 h-6 bg-white/30 rounded-full animate-pulse"></div>
+            </div>
+          ) : user ? (
+            <Link 
+              href="/dashboard"
+              className="cta-button text-white text-lg font-semibold px-12 py-6 rounded-full text-xl flex items-center gap-3 hover:scale-105 transition-transform duration-200 text-center"
+            >
+              Go to Dashboard
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </Link>
+          ) : (
+            <Link 
+              href="/login"
+              className="cta-button text-white text-lg font-semibold px-12 py-6 rounded-full text-xl flex items-center gap-3 hover:scale-105 transition-transform duration-200 text-center"
+            >
+              Get Started
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+            </Link>
+          )}
           <p className="text-zinc-500 text-sm animate-fade-in" style={{ animationDelay: "0.8s" }}>
-            Join thousands of members making a difference through golf
+            {user 
+              ? "Track your scores, support charity, and win prizes" 
+              : "Join thousands of members making a difference through golf"
+            }
           </p>
         </div>
+
+        {/* Demo Credentials */}
+        {!user && (
+          <div className="animate-fade-in-up" style={{ animationDelay: "1s" }}>
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 max-w-md mx-auto">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-black" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                </div>
+                <h3 className="text-white font-semibold">Demo Account</h3>
+              </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-300">Email:</span>
+                  <code className="bg-black/30 px-2 py-1 rounded text-white font-mono">demo@test.com</code>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-zinc-300">Password:</span>
+                  <code className="bg-black/30 px-2 py-1 rounded text-white font-mono">123456</code>
+                </div>
+              </div>
+              <Link
+                href="/login"
+                className="mt-4 w-full inline-flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+                Quick Login with Demo
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Auth Controls */}
         <div className="mt-12 animate-fade-in" style={{ animationDelay: "1s" }}>

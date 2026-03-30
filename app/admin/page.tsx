@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../lib/AuthProvider";
 import { supabase } from "../../lib/supabaseClient";
+import Navbar from "../../components/Navbar";
 
 const DEFAULT_ADMIN_EMAIL = "admin@golfclub.com";
 
@@ -372,8 +373,9 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-zinc-50 px-6 py-10 dark:bg-black">
-      <div className="mx-auto w-full max-w-6xl">
+    <div className="flex flex-1 flex-col bg-zinc-50 dark:bg-black">
+      <Navbar />
+      <div className="mx-auto w-full max-w-6xl px-6 py-10">
         <div className="mb-8 flex flex-col gap-2">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>

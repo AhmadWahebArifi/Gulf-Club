@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../lib/AuthProvider";
 import { supabase } from "../../lib/supabaseClient";
+import Navbar from "../../components/Navbar";
 
 type CharityOption = {
   id: string;
@@ -194,6 +195,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <Navbar />
       <div className="absolute inset-0 bg-black/40"></div>
       
       <div className="relative z-10 mx-auto max-w-7xl px-6 py-10">
@@ -242,18 +244,23 @@ export default function DashboardPage() {
           ) : null}
         </div>
 
-        {/* Big CTA Card */}
+        {/* Demo Notice - Non-blocking */}
         {!subscription || subscription.status !== true ? (
-          <div className="mb-8 rounded-3xl bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 p-8 shadow-2xl">
-            <div className="text-center">
-              <h2 className="text-3xl font-bold text-white mb-4">
-                Subscribe & Support Charity
-              </h2>
-              <p className="text-xl text-purple-100 mb-8 max-w-2xl mx-auto">
-                Join our community of golfers making a difference. Play rounds, support causes you care about, and win amazing prizes.
-              </p>
+          <div className="mb-8 rounded-2xl border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-800 dark:bg-yellow-900/20">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 text-black" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">Demo Mode Active</h3>
+                <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                  You're exploring all features without a subscription. In production, a subscription would enable charity allocations and prize eligibility.
+                </p>
+              </div>
               <button
-                className="inline-flex h-14 items-center justify-center rounded-xl bg-white px-8 text-lg font-bold text-purple-600 transition-all hover:bg-purple-50 shadow-xl hover:shadow-2xl"
+                className="text-xs bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
                 type="button"
                 disabled={dbLoading}
                 onClick={async () => {
@@ -283,7 +290,7 @@ export default function DashboardPage() {
                   }
                 }}
               >
-                {dbLoading ? "Subscribing…" : "Subscribe Now - Support Charity"}
+                {dbLoading ? "Activating…" : "Activate Full Access"}
               </button>
             </div>
           </div>

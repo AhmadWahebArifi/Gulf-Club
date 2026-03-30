@@ -51,7 +51,7 @@ export default function SignupPage() {
               if (signUpError) throw signUpError;
 
               if (data.session) {
-                router.push("/");
+                router.push("/dashboard");
                 return;
               }
 
