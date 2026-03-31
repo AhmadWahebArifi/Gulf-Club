@@ -129,6 +129,8 @@ export default function DashboardPage() {
         .from("subscriptions")
         .select("*")
         .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle(),
       supabase.from("charities").select("id,name,description").order("name", { ascending: true }),
       supabase
@@ -442,25 +444,33 @@ export default function DashboardPage() {
                 />
               </div>
               <button
-                className="w-full rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                className="w-full rounded-xl bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                disabled={dbLoading || !selectedCharityId || !charityPercentage}
                 onClick={async () => {
-                  if (!selectedCharityId || !charityPercentage) return;
+                  if (!selectedCharityId || !charityPercentage || !user) return;
                   setDbLoading(true);
+                  setDbError(null);
                   try {
-                    await supabase.from("user_charity").upsert({
+                    const { error: upsertError } = await supabase.from("user_charity").upsert({
                       user_id: user.id,
                       charity_id: selectedCharityId,
                       percentage: parseInt(charityPercentage.toString()),
                     });
-                    setDbError(null);
+                    
+                    if (upsertError) throw upsertError;
+                    
+                    // Show success feedback
+                    console.log("Charity preference saved successfully");
+                    
                   } catch (err) {
-                    setDbError("Failed to save charity preference");
+                    console.error("Charity save error:", err);
+                    setDbError(err instanceof Error ? err.message : "Failed to save charity preference");
                   } finally {
                     setDbLoading(false);
                   }
                 }}
               >
-                Save Charity Preference
+                {dbLoading ? "Saving..." : "Save Charity Preference"}
               </button>
             </div>
           </section>

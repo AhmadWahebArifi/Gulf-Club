@@ -2,9 +2,17 @@
 
 import Link from "next/link";
 import { useAuth } from "../lib/AuthProvider";
+import { supabase } from "../lib/supabaseClient";
+import { useRouter } from "next/navigation";
 
 export default function Navbar() {
   const { user, loading } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/");
+  };
 
   const isAdmin = () => {
     const configured = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
@@ -62,12 +70,12 @@ export default function Navbar() {
                 <span className="text-white/60 text-sm hidden sm:block">
                   {user.email}
                 </span>
-                <Link
-                  href="/dashboard"
+                <button
+                  onClick={handleLogout}
                   className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-full text-sm font-medium transition-all duration-200"
                 >
-                  Dashboard
-                </Link>
+                  Logout
+                </button>
               </div>
             ) : (
               <div className="flex items-center space-x-3">
@@ -123,7 +131,14 @@ export default function Navbar() {
               </Link>
             )}
 
-            {!user && (
+            {user ? (
+              <button
+                onClick={handleLogout}
+                className="text-white/80 hover:text-white transition-colors duration-200 font-medium text-left"
+              >
+                Logout
+              </button>
+            ) : (
               <>
                 <Link
                   href="/login"
