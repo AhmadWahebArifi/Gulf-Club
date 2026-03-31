@@ -108,7 +108,7 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Demo Credentials */}
+        {/* Get Started Card */}
         {!user && (
           <div className="animate-fade-in-up w-full max-w-sm px-4" style={{ animationDelay: "1s" }}>
             <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-4 sm:p-6 mx-auto">
@@ -118,26 +118,25 @@ export default function Home() {
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
                 </div>
-                <h3 className="text-white font-semibold text-sm sm:text-base">Demo Account</h3>
+                <h3 className="text-white font-semibold text-sm sm:text-base">Get Started</h3>
               </div>
               <div className="space-y-2 text-xs sm:text-sm">
                 <div className="flex justify-between items-center">
-                  <span className="text-zinc-300">Email:</span>
-                  <code className="bg-black/30 px-2 py-1 rounded text-white font-mono text-xs">demo2@test.com</code>
+                  <span className="text-zinc-300">Ready to play?</span>
+                  <span className="text-white font-medium">Sign up to get started</span>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-zinc-300">Password:</span>
-                  <code className="bg-black/30 px-2 py-1 rounded text-white font-mono text-xs">demo123</code>
+                <div className="text-xs text-zinc-400">
+                  Create your account to track scores, support charities, and win prizes!
                 </div>
               </div>
               <Link
-                href="/login"
+                href="/signup"
                 className="mt-3 sm:mt-4 w-full inline-flex items-center justify-center gap-2 bg-white/20 hover:bg-white/30 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200"
               >
                 <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                 </svg>
-                Quick Login with Demo
+                Sign Up Now
               </Link>
             </div>
           </div>
