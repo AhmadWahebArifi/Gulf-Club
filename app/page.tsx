@@ -123,11 +123,11 @@ export default function Home() {
               <div className="space-y-2 text-xs sm:text-sm">
                 <div className="flex justify-between items-center">
                   <span className="text-zinc-300">Email:</span>
-                  <code className="bg-black/30 px-2 py-1 rounded text-white font-mono text-xs">demo@test.com</code>
+                  <code className="bg-black/30 px-2 py-1 rounded text-white font-mono text-xs">demo2@test.com</code>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-zinc-300">Password:</span>
-                  <code className="bg-black/30 px-2 py-1 rounded text-white font-mono text-xs">123456</code>
+                  <code className="bg-black/30 px-2 py-1 rounded text-white font-mono text-xs">demo123</code>
                 </div>
               </div>
               <Link

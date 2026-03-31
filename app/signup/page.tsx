@@ -46,16 +46,21 @@ export default function SignupPage() {
               const { data, error: signUpError } = await supabase.auth.signUp({
                 email,
                 password,
+                options: {
+                  emailRedirectTo: `${window.location.origin}/dashboard`,
+                }
               });
 
               if (signUpError) throw signUpError;
 
               if (data.session) {
+                // User was automatically confirmed (rare case)
                 router.push("/dashboard");
                 return;
               }
 
-              setSuccess("Check your email to confirm your account.");
+              // User needs to confirm email
+              setSuccess("Account created! Please check your email and click the confirmation link to login.");
             } catch (err) {
               const message = err instanceof Error ? err.message : "Signup failed";
               setError(message);
@@ -102,15 +107,26 @@ export default function SignupPage() {
             />
           </label>
 
-          {error ? (
-            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
-              {error}
+          {success ? (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
+              <div className="font-medium mb-1">✅ {success}</div>
+              <div className="text-xs mt-2 space-y-1">
+                <p>📧 Check your inbox (and spam folder)</p>
+                <p>🔗 Click the confirmation link in the email</p>
+                <p>🔄 Then return here to login</p>
+              </div>
             </div>
           ) : null}
 
-          {success ? (
-            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
-              {success}
+          {error ? (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
+              <div className="font-medium mb-1">❌ {error}</div>
+              {error.includes("Invalid login credentials") && (
+                <div className="text-xs mt-2">
+                  <p>💡 If you just signed up, please confirm your email first.</p>
+                  <p>📧 Check your email for the confirmation link.</p>
+                </div>
+              )}
             </div>
           ) : null}
 
@@ -129,6 +145,12 @@ export default function SignupPage() {
             Log in
           </Link>
         </p>
+
+        <div className="mt-4 p-3 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20">
+          <p className="text-xs text-blue-700 dark:text-blue-300">
+            <strong>💡 Tip:</strong> After signing up, check your email (including spam folder) and click the confirmation link before trying to login.
+          </p>
+        </div>
       </div>
     </div>
   );

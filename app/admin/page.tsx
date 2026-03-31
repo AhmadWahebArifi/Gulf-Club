@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../lib/AuthProvider";
 import { supabase } from "../../lib/supabaseClient";
 import Navbar from "../../components/Navbar";
+import { useToast } from "../../lib/useToast";
 
 const DEFAULT_ADMIN_EMAIL = "admin@golfclub.com";
 
@@ -80,6 +81,7 @@ function formatMaybeSupabaseError(err: unknown, fallback: string) {
 export default function AdminPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { showToast } = useToast();
 
   const isAdmin = useMemo(() => {
     const configured = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
@@ -188,7 +190,8 @@ export default function AdminPage() {
 
       if (checkError) throw checkError;
       if (existingDraw) {
-        throw new Error(`Draw already exists for ${new Date(periodStart).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}. Each month can only have one draw.`);
+        const errorMsg = `Draw already exists for ${new Date(periodStart).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}. Each month can only have one draw.`;
+        throw new Error(errorMsg);
       }
 
       const [activeSubsRes, monthScoresRes] = await Promise.all([
@@ -289,8 +292,14 @@ export default function AdminPage() {
 
       await loadData();
       setSelectedDrawEventId(eventId);
+      
+      // Show success toast
+      const winnerCount = winnersPicked.length;
+      showToast(`Monthly draw completed! ${winnerCount} winner${winnerCount !== 1 ? 's' : ''} selected.`, "success");
+      
     } catch (err) {
       setDbError(formatMaybeSupabaseError(err, "Failed to run monthly draw"));
+      showToast("Failed to run monthly draw", "error");
     } finally {
       setDbLoading(false);
     }

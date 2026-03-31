@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../lib/AuthProvider";
 import { supabase } from "../../lib/supabaseClient";
 import Navbar from "../../components/Navbar";
+import { useToast } from "../../lib/useToast";
 
 type CharityOption = {
   id: string;
@@ -66,6 +67,7 @@ const DEFAULT_ADMIN_EMAIL = "admin@golfclub.com";
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { showToast } = useToast();
 
   const isAdmin = useMemo(() => {
     const configured = process.env.NEXT_PUBLIC_ADMIN_EMAILS;
@@ -380,9 +382,13 @@ export default function DashboardPage() {
                     if (fetchError) throw fetchError;
                     setScores(scoresData || []);
                     
+                    // Show success toast
+                    showToast("Score saved successfully!", "success");
+                    
                   } catch (err) {
                     console.error("Score save error:", err);
                     setDbError(err instanceof Error ? err.message : "Failed to save score");
+                    showToast("Failed to save score", "error");
                   } finally {
                     setDbLoading(false);
                   }
@@ -461,10 +467,12 @@ export default function DashboardPage() {
                     
                     // Show success feedback
                     console.log("Charity preference saved successfully");
+                    showToast("Charity preference saved successfully!", "success");
                     
                   } catch (err) {
                     console.error("Charity save error:", err);
                     setDbError(err instanceof Error ? err.message : "Failed to save charity preference");
+                    showToast("Failed to save charity preference", "error");
                   } finally {
                     setDbLoading(false);
                   }

@@ -60,16 +60,26 @@ function LoginPageContent() {
             setLoading(true);
 
             try {
-              const { error: signInError } = await supabase.auth.signInWithPassword({
+              console.log("🔍 Login Debug - Attempting login with:", { email, password: "***" });
+              
+              const { data, error: signInError } = await supabase.auth.signInWithPassword({
                 email,
                 password,
               });
 
+              console.log("🔍 Login Debug - Response:", { 
+                data: data ? "Session data received" : "No session data", 
+                error: signInError?.message || "No error" 
+              });
+
               if (signInError) throw signInError;
 
+              console.log("🔍 Login Debug - Success! Redirecting to:", next);
               router.push(next);
             } catch (err) {
+              console.error("🔍 Login Debug - Error:", err);
               const message = err instanceof Error ? err.message : "Login failed";
+              console.error("🔍 Login Debug - Error message:", message);
               setError(message);
             } finally {
               setLoading(false);
