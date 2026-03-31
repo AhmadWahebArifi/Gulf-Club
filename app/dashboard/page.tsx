@@ -148,6 +148,13 @@ export default function DashboardPage() {
       .then(([subRes, charitiesRes, userCharityRes, scoresRes]) => {
         if (!active) return;
 
+        console.log("Dashboard data loaded:", {
+          subscriptions: subRes.data,
+          charities: charitiesRes.data,
+          userCharity: userCharityRes.data,
+          scores: scoresRes.data
+        });
+
         if (subRes.error) throw subRes.error;
         if (charitiesRes.error) throw charitiesRes.error;
         if (userCharityRes.error) throw userCharityRes.error;
@@ -341,34 +348,45 @@ export default function DashboardPage() {
                 />
               </div>
               <button
-                className="w-full rounded-xl bg-black px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black"
+                className="w-full rounded-xl bg-black px-4 py-2 text-sm font-medium text-white dark:bg-white dark:text-black disabled:opacity-50"
+                disabled={dbLoading || !score || !playedAt}
                 onClick={async () => {
-                  if (!score || !playedAt) return;
+                  if (!score || !playedAt || !user) return;
                   setDbLoading(true);
+                  setDbError(null);
                   try {
-                    await supabase.from("scores").insert({
+                    const { error: insertError } = await supabase.from("scores").insert({
                       user_id: user.id,
                       points: parseInt(score.toString()),
                       date: playedAt,
                     });
+                    
+                    if (insertError) throw insertError;
+                    
+                    // Clear form
                     setScore("");
                     setPlayedAt("");
+                    
                     // Refresh scores
-                    const { data } = await supabase
+                    const { data: scoresData, error: fetchError } = await supabase
                       .from("scores")
                       .select("*")
                       .eq("user_id", user.id)
                       .order("date", { ascending: false })
                       .limit(5);
-                    setScores(data || []);
+                    
+                    if (fetchError) throw fetchError;
+                    setScores(scoresData || []);
+                    
                   } catch (err) {
-                    setDbError("Failed to save score");
+                    console.error("Score save error:", err);
+                    setDbError(err instanceof Error ? err.message : "Failed to save score");
                   } finally {
                     setDbLoading(false);
                   }
                 }}
               >
-                Save Score
+                {dbLoading ? "Saving..." : "Add Score"}
               </button>
             </div>
 
