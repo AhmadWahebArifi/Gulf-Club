@@ -179,6 +179,18 @@ export default function AdminPage() {
     try {
       const periodStart = startOfCurrentMonthISO();
 
+      // Check if draw already exists for this month
+      const { data: existingDraw, error: checkError } = await supabase
+        .from("draw_events")
+        .select("id")
+        .eq("period_start", periodStart)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+      if (existingDraw) {
+        throw new Error(`Draw already exists for ${new Date(periodStart).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}. Each month can only have one draw.`);
+      }
+
       const [activeSubsRes, monthScoresRes] = await Promise.all([
         supabase
           .from("subscriptions")
@@ -437,6 +449,32 @@ export default function AdminPage() {
             <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
               Winners are selected with weighted randomness based on Stableford points this month.
             </p>
+            
+            {/* Check if current month already has a draw */}
+            {(() => {
+              const currentMonth = startOfCurrentMonthISO();
+              const existingDraw = drawEvents.find(event => event.period_start === currentMonth);
+              return existingDraw ? (
+                <div className="mb-4 p-3 rounded-lg border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                      <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                        Draw already completed for {new Date(currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                      </p>
+                      <p className="text-xs text-green-700 dark:text-green-300">
+                        Run on {new Date(existingDraw.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null;
+            })()}
+            
             <button
               className="inline-flex h-11 items-center justify-center rounded-xl bg-black px-4 text-sm font-medium text-white disabled:opacity-60 dark:bg-white dark:text-black"
               onClick={runMonthlyDraw}
